@@ -1,6 +1,7 @@
 {
   "expo": {
-    "name": "orderly",
+    "name": "Orderly",
+    "displayName": "Orderly",
     "slug": "orderly",
     "version": "1.0.0",
     "orientation": "portrait",

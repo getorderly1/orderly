@@ -1,14 +1,15 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { supabase } from "../lib/supabase";
 
 const steps = ["Project", "Order", "Artwork", "Shipping", "Budget", "Review"];
 
@@ -69,6 +70,7 @@ export default function NewOrderScreen() {
   const [budget, setBudget] = useState("");
   const [budgetNotes, setBudgetNotes] = useState("");
   const [questions, setQuestions] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const sizeTotal =
     numberValue(youthXS) +
@@ -132,7 +134,70 @@ export default function NewOrderScreen() {
     setStep(step - 1);
   };
 
-  const submitOrder = () => {
+  const submitOrder = async () => {
+    if (isSubmitting) return;
+
+    if (sizeWarning) {
+      alert(
+        `Please check the size breakdown before submitting. Your total quantity is ${enteredQuantity}, but your sizes add up to ${sizeTotal}.`
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const fullOrderNotes = [
+      orderNotes ? `Order Notes: ${orderNotes}` : "",
+      sizeSummary ? `Size Breakdown: ${sizeSummary}` : "",
+      sizeNotes ? `Size Notes: ${sizeNotes}` : "",
+      hasArtwork ? "Customer has artwork: Yes" : "Customer has artwork: No",
+      needsDesignHelp ? "Needs design help: Yes" : "Needs design help: No",
+      artworkNotes ? `Artwork Notes: ${artworkNotes}` : "",
+      designConcept ? `Design Concept: ${designConcept}` : "",
+      preferredColors ? `Preferred Colors: ${preferredColors}` : "",
+      designText ? `Design Text: ${designText}` : "",
+      placementNotes ? `Placement Notes: ${placementNotes}` : "",
+      recipientName ? `Recipient: ${recipientName}` : "",
+      recipientPhone ? `Recipient Phone: ${recipientPhone}` : "",
+      deliveryNotes ? `Delivery Notes: ${deliveryNotes}` : "",
+      budgetNotes ? `Budget Notes: ${budgetNotes}` : "",
+      questions ? `Questions / Recommendations: ${questions}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const fullShippingAddress = [shippingAddress, cityStateZip]
+      .filter(Boolean)
+      .join(", ");
+
+    const { error } = await supabase.from("orders").insert({
+      project_name: projectName,
+      company_name: companyName,
+      primary_contact: contactName,
+      primary_email: contactEmail,
+      phone_number: phoneNumber,
+      collaborator_emails: collaborators.join(", "),
+      garment_type: garmentType,
+      garment_color: color,
+      quantity: enteredQuantity || null,
+      print_type: printType,
+      print_locations: printLocations,
+      due_date: dueDate,
+      rush_order: rushOrder,
+      order_notes: fullOrderNotes,
+      shipping_method: deliveryMethod,
+      shipping_address: fullShippingAddress,
+      budget: budget,
+      status: "New Submission",
+    });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      alert(`Order could not be submitted: ${error.message}`);
+      return;
+    }
+
     alert(
       "Order request submitted. Katelyn will review your project details and follow up from katelyn@blackcatmerch.com."
     );
@@ -666,7 +731,7 @@ export default function NewOrderScreen() {
             onPress={step === steps.length - 1 ? submitOrder : nextStep}
           >
             <Text style={styles.continueText}>
-              {step === steps.length - 1 ? "Submit Order Request" : "Continue"}
+              {isSubmitting ? "Submitting..." : step === steps.length - 1 ? "Submit Order Request" : "Continue"}
             </Text>
           </TouchableOpacity>
 

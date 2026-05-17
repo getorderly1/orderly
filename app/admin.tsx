@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
     ScrollView,
     StyleSheet,
@@ -8,61 +9,59 @@ import {
     useWindowDimensions,
 } from "react-native";
 
-const orders = [
-  {
-    id: "ORD-1001",
-    project: "Spring Merch Drop",
-    customer: "North Atlanta FC",
-    contact: "Maya Thompson",
-    email: "maya@northernfc.com",
-    status: "New Submission",
-    quoteStatus: "Not Started",
-    due: "May 30",
-    rush: true,
-    files: 4,
-    type: "New Order",
-    updated: "2h ago",
-    notes:
-      "Needs shirts and hoodies for spring team store. Artwork uploaded but wants design help on sleeve placement.",
-  },
-  {
-    id: "ORD-1002",
-    project: "Summer Staff Tees",
-    customer: "Solo La Familia",
-    contact: "Rey Ortiz",
-    email: "hello@sololafamilia.com",
-    status: "Reviewing",
-    quoteStatus: "In Progress",
-    due: "June 8",
-    rush: false,
-    files: 2,
-    type: "Reorder",
-    updated: "5h ago",
-    notes:
-      "Repeat order with quantity changes. Keep same artwork but update shipping address.",
-  },
-  {
-    id: "ORD-1003",
-    project: "Tournament Jerseys",
-    customer: "Elite FC",
-    contact: "Carlos Rivera",
-    email: "carlos@elitefc.com",
-    status: "Quote Sent",
-    quoteStatus: "Sent",
-    due: "June 14",
-    rush: false,
-    files: 6,
-    type: "New Order",
-    updated: "1d ago",
-    notes:
-      "Waiting on customer approval. Jerseys need front logo, back numbers, and sponsor mark.",
-  },
-];
+import { supabase } from "../lib/supabase";
 
 export default function AdminScreen() {
-  const [selectedOrder, setSelectedOrder] = useState(orders[0]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const { width } = useWindowDimensions();
   const isMobile = width < 900;
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.log("Error fetching orders:", error.message);
+      return;
+    }
+
+    setOrders(data || []);
+
+    if (data && data.length > 0) {
+      setSelectedOrder(data[0]);
+    }
+  };
+
+  const openProject = () => {
+    if (!selectedOrder) return;
+
+    router.push({
+      pathname: "/project",
+      params: { id: selectedOrder.id },
+    });
+  };
+
+  const newSubmissions = orders.filter(
+    (order) => order.status === "New Submission"
+  ).length;
+
+  const quotesPending = orders.filter(
+    (order) =>
+      order.status === "New Submission" || order.status === "Reviewing"
+  ).length;
+
+  const activeOrders = orders.filter(
+    (order) => order.status !== "Completed"
+  ).length;
+
+  const rushOrders = orders.filter((order) => order.rush_order).length;
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>
@@ -70,10 +69,7 @@ export default function AdminScreen() {
         <Text style={styles.sidebarLogo}>Orderly</Text>
         <Text style={styles.sidebarSubtext}>Admin Workspace</Text>
 
-        <ScrollView
-          horizontal={isMobile}
-          showsHorizontalScrollIndicator={false}
-        >
+        <ScrollView horizontal={isMobile} showsHorizontalScrollIndicator={false}>
           <View style={[styles.sidebarMenu, isMobile && styles.sidebarMenuMobile]}>
             <SidebarItem label="Dashboard" active />
             <SidebarItem label="Orders" />
@@ -96,22 +92,23 @@ export default function AdminScreen() {
             <Text style={[styles.welcome, isMobile && styles.welcomeMobile]}>
               Welcome back, Katelyn
             </Text>
+
             <Text style={styles.subheader}>
               Review submissions, manage quotes, organize files, and move
               projects forward.
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.headerButton}>
-            <Text style={styles.headerButtonText}>+ Add Project</Text>
+          <TouchableOpacity style={styles.headerButton} onPress={fetchOrders}>
+            <Text style={styles.headerButtonText}>Refresh Orders</Text>
           </TouchableOpacity>
         </View>
 
         <View style={[styles.statsRow, isMobile && styles.statsRowMobile]}>
-          <StatCard number="8" label="New Submissions" />
-          <StatCard number="5" label="Quotes Pending" />
-          <StatCard number="14" label="Active Orders" />
-          <StatCard number="3" label="Rush Orders" />
+          <StatCard number={`${newSubmissions}`} label="New Submissions" />
+          <StatCard number={`${quotesPending}`} label="Quotes Pending" />
+          <StatCard number={`${activeOrders}`} label="Active Orders" />
+          <StatCard number={`${rushOrders}`} label="Rush Orders" />
         </View>
 
         <View style={[styles.workspaceGrid, isMobile && styles.workspaceGridMobile]}>
@@ -121,22 +118,36 @@ export default function AdminScreen() {
               <Text style={styles.sectionHint}>Newest projects first</Text>
             </View>
 
+            {orders.length === 0 && (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyTitle}>No submissions yet</Text>
+                <Text style={styles.emptyText}>
+                  New customer orders will appear here automatically.
+                </Text>
+              </View>
+            )}
+
             {orders.map((order) => (
               <TouchableOpacity
                 key={order.id}
                 style={[
                   styles.orderCard,
-                  selectedOrder.id === order.id && styles.orderCardActive,
+                  selectedOrder?.id === order.id && styles.orderCardActive,
                 ]}
                 onPress={() => setSelectedOrder(order)}
               >
                 <View style={styles.orderTopRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.projectName}>{order.project}</Text>
-                    <Text style={styles.customerName}>{order.customer}</Text>
+                    <Text style={styles.projectName}>
+                      {order.project_name || "Untitled Project"}
+                    </Text>
+
+                    <Text style={styles.customerName}>
+                      {order.company_name || "No company added"}
+                    </Text>
                   </View>
 
-                  {order.rush && (
+                  {order.rush_order && (
                     <View style={styles.rushBadge}>
                       <Text style={styles.rushText}>RUSH</Text>
                     </View>
@@ -144,62 +155,144 @@ export default function AdminScreen() {
                 </View>
 
                 <View style={styles.metaRow}>
-                  <StatusBadge status={order.status} />
-                  <Text style={styles.metaText}>Due {order.due}</Text>
-                  <Text style={styles.metaText}>{order.files} files</Text>
+                  <StatusBadge status={order.status || "New Submission"} />
+
+                  <Text style={styles.metaText}>
+                    Due {order.due_date || "Not added"}
+                  </Text>
+
+                  <Text style={styles.metaText}>
+                    {order.print_type || "Print TBD"}
+                  </Text>
                 </View>
 
                 <View style={styles.orderBottomRow}>
-                  <Text style={styles.orderType}>{order.type}</Text>
-                  <Text style={styles.updatedText}>{order.updated}</Text>
+                  <Text style={styles.orderType}>
+                    {order.rush_order ? "Rush Order" : "New Order"}
+                  </Text>
+
+                  <Text style={styles.updatedText}>
+                    {formatDate(order.created_at)}
+                  </Text>
                 </View>
               </TouchableOpacity>
             ))}
           </View>
 
           <View style={[styles.previewPanel, isMobile && styles.fullWidth]}>
-            <View style={[styles.previewHeader, isMobile && styles.previewHeaderMobile]}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.previewLabel}>Project Workspace</Text>
-                <Text style={styles.previewTitle}>{selectedOrder.project}</Text>
-                <Text style={styles.previewCustomer}>{selectedOrder.customer}</Text>
+            {!selectedOrder ? (
+              <View style={styles.emptyPreview}>
+                <Text style={styles.emptyTitle}>Select an order</Text>
+                <Text style={styles.emptyText}>
+                  Once a customer submits an order, you’ll be able to review the
+                  project details here.
+                </Text>
               </View>
+            ) : (
+              <>
+                <View
+                  style={[
+                    styles.previewHeader,
+                    isMobile && styles.previewHeaderMobile,
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.previewLabel}>Project Workspace</Text>
 
-              <StatusBadge status={selectedOrder.status} />
-            </View>
+                    <Text style={styles.previewTitle}>
+                      {selectedOrder.project_name || "Untitled Project"}
+                    </Text>
 
-            <View style={[styles.actionRow, isMobile && styles.actionRowMobile]}>
-              <TouchableOpacity style={styles.primaryAction}>
-                <Text style={styles.primaryActionText}>Open Project</Text>
-              </TouchableOpacity>
+                    <Text style={styles.previewCustomer}>
+                      {selectedOrder.company_name || "No company added"}
+                    </Text>
+                  </View>
 
-              <TouchableOpacity style={styles.secondaryAction}>
-                <Text style={styles.secondaryActionText}>Send Quote</Text>
-              </TouchableOpacity>
-            </View>
+                  <StatusBadge status={selectedOrder.status || "New Submission"} />
+                </View>
 
-            <View style={styles.detailGrid}>
-              <DetailBlock label="Contact" value={selectedOrder.contact} />
-              <DetailBlock label="Email" value={selectedOrder.email} />
-              <DetailBlock label="Due Date" value={selectedOrder.due} />
-              <DetailBlock label="Quote" value={selectedOrder.quoteStatus} />
-              <DetailBlock label="Files" value={`${selectedOrder.files} uploaded`} />
-              <DetailBlock label="Type" value={selectedOrder.type} />
-            </View>
+                <View style={[styles.actionRow, isMobile && styles.actionRowMobile]}>
+                  <TouchableOpacity
+                    style={styles.primaryAction}
+                    onPress={openProject}
+                  >
+                    <Text style={styles.primaryActionText}>Open Project</Text>
+                  </TouchableOpacity>
 
-            <View style={styles.notesBox}>
-              <Text style={styles.notesLabel}>Submission Notes</Text>
-              <Text style={styles.notesText}>{selectedOrder.notes}</Text>
-            </View>
+                  <TouchableOpacity style={styles.secondaryAction}>
+                    <Text style={styles.secondaryActionText}>Send Quote</Text>
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.quickTools}>
-              <Text style={styles.quickToolsTitle}>Quick Tools</Text>
+                <View style={styles.detailGrid}>
+                  <DetailBlock
+                    label="Contact"
+                    value={selectedOrder.primary_contact || "Not added"}
+                  />
 
-              <ToolRow title="View Files" subtitle="Open artwork and references" />
-              <ToolRow title="Add Internal Note" subtitle="Keep private project notes" />
-              <ToolRow title="Duplicate Reorder" subtitle="Create a reorder from this project" />
-              <ToolRow title="Update Status" subtitle="Move this project forward" />
-            </View>
+                  <DetailBlock
+                    label="Email"
+                    value={selectedOrder.primary_email || "Not added"}
+                  />
+
+                  <DetailBlock
+                    label="Phone"
+                    value={selectedOrder.phone_number || "Not added"}
+                  />
+
+                  <DetailBlock
+                    label="Due Date"
+                    value={selectedOrder.due_date || "Not added"}
+                  />
+
+                  <DetailBlock
+                    label="Quantity"
+                    value={
+                      selectedOrder.quantity
+                        ? `${selectedOrder.quantity}`
+                        : "Not added"
+                    }
+                  />
+
+                  <DetailBlock
+                    label="Budget"
+                    value={selectedOrder.budget || "Not added"}
+                  />
+                </View>
+
+                <View style={styles.notesBox}>
+                  <Text style={styles.notesLabel}>Submission Notes</Text>
+
+                  <Text style={styles.notesText}>
+                    {selectedOrder.order_notes || "No notes added yet."}
+                  </Text>
+                </View>
+
+                <View style={styles.quickTools}>
+                  <Text style={styles.quickToolsTitle}>Quick Tools</Text>
+
+                  <ToolRow
+                    title="View Files"
+                    subtitle="Open artwork and references"
+                  />
+
+                  <ToolRow
+                    title="Add Internal Note"
+                    subtitle="Keep private project notes"
+                  />
+
+                  <ToolRow
+                    title="Duplicate Reorder"
+                    subtitle="Create a reorder from this project"
+                  />
+
+                  <ToolRow
+                    title="Update Status"
+                    subtitle="Move this project forward"
+                  />
+                </View>
+              </>
+            )}
           </View>
         </View>
 
@@ -207,22 +300,37 @@ export default function AdminScreen() {
           <Text style={styles.sectionTitle}>Recent Activity</Text>
 
           <View style={styles.activityCard}>
-            <ActivityItem
-              title="New submission received"
-              subtitle="North Atlanta FC submitted Spring Merch Drop."
-            />
-            <ActivityItem
-              title="Artwork uploaded"
-              subtitle="Solo La Familia added updated logo files."
-            />
-            <ActivityItem
-              title="Quote sent"
-              subtitle="Elite FC received the tournament jersey quote."
-            />
-            <ActivityItem
-              title="Rush order flagged"
-              subtitle="A project was marked urgent for May 30."
-            />
+            {orders.length === 0 ? (
+              <ActivityItem
+                title="No activity yet"
+                subtitle="Activity will appear here once customers submit orders."
+              />
+            ) : (
+              <>
+                <ActivityItem
+                  title="Latest submission received"
+                  subtitle={`${
+                    orders[0]?.company_name || "A customer"
+                  } submitted ${
+                    orders[0]?.project_name || "a new project"
+                  }.`}
+                />
+
+                <ActivityItem
+                  title="Order queue updated"
+                  subtitle={`${orders.length} total order request${
+                    orders.length === 1 ? "" : "s"
+                  } currently in the workspace.`}
+                />
+
+                <ActivityItem
+                  title="Rush order check"
+                  subtitle={`${rushOrders} rush order${
+                    rushOrders === 1 ? "" : "s"
+                  } currently flagged.`}
+                />
+              </>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -232,7 +340,9 @@ export default function AdminScreen() {
 
 function SidebarItem({ label, active }: { label: string; active?: boolean }) {
   return (
-    <TouchableOpacity style={[styles.sidebarItem, active && styles.sidebarItemActive]}>
+    <TouchableOpacity
+      style={[styles.sidebarItem, active && styles.sidebarItemActive]}
+    >
       <Text style={[styles.sidebarText, active && styles.sidebarTextActive]}>
         {label}
       </Text>
@@ -273,6 +383,7 @@ function ToolRow({ title, subtitle }: { title: string; subtitle: string }) {
         <Text style={styles.toolTitle}>{title}</Text>
         <Text style={styles.toolSubtitle}>{subtitle}</Text>
       </View>
+
       <Text style={styles.toolArrow}>→</Text>
     </TouchableOpacity>
   );
@@ -282,12 +393,28 @@ function ActivityItem({ title, subtitle }: { title: string; subtitle: string }) 
   return (
     <View style={styles.activityItem}>
       <View style={styles.activityDot} />
+
       <View style={{ flex: 1 }}>
         <Text style={styles.activityTitle}>{title}</Text>
         <Text style={styles.activitySubtitle}>{subtitle}</Text>
       </View>
     </View>
   );
+}
+
+function formatDate(date: string | null) {
+  if (!date) return "Recently";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Recently";
+  }
+
+  return parsedDate.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 const styles = StyleSheet.create({
@@ -489,6 +616,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     marginTop: 4,
+  },
+
+  emptyCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "#ebe7dc",
+    alignItems: "center",
+  },
+
+  emptyPreview: {
+    backgroundColor: "#fbfaf7",
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "#ebe7dc",
+    alignItems: "center",
+  },
+
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#111111",
+    marginBottom: 8,
+  },
+
+  emptyText: {
+    color: "#6f6c64",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 22,
   },
 
   orderCard: {

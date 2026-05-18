@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   },
 
   slogan: {
-    fontSize: 24,
+    fontSize: 12,
     fontWeight: "900",
     color: "#d6c7a1",
     lineHeight: 30,

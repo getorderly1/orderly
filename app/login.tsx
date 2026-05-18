@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { supabase } from "../lib/supabase";
 
+const ADMIN_EMAILS = ["katelyn@blackcatmerch.com"];
+
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,28 +49,32 @@ export default function LoginScreen() {
       return;
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role, email")
-      .eq("id", session.user.id)
-      .single();
+    const authEmail = session.user.email?.trim().toLowerCase();
 
-    setIsLoggingIn(false);
-
-    if (profileError) {
-      Alert.alert(
-        "Profile issue",
-        "You are logged in, but your profile could not be loaded."
-      );
-      router.replace("/" as any);
-      return;
-    }
-
-    if (profile?.role === "admin") {
+    if (authEmail && ADMIN_EMAILS.includes(authEmail)) {
+      setIsLoggingIn(false);
       router.replace("/admin" as any);
       return;
     }
 
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, email")
+      .eq("id", session.user.id)
+      .maybeSingle();
+
+    const profileEmail = profile?.email?.trim().toLowerCase();
+
+    if (
+      profile?.role === "admin" ||
+      (profileEmail && ADMIN_EMAILS.includes(profileEmail))
+    ) {
+      setIsLoggingIn(false);
+      router.replace("/admin" as any);
+      return;
+    }
+
+    setIsLoggingIn(false);
     router.replace("/" as any);
   }
 

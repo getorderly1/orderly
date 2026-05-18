@@ -30,42 +30,53 @@ export default function HomeScreen() {
     checkUserAndLoadOrders();
   }, []);
 
-  async function checkUserAndLoadOrders() {
-    setLoading(true);
+ async function checkUserAndLoadOrders() {
+  setLoading(true);
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-    if (!session) {
-  router.replace("/login" as any);
-  return;
-}
+  if (!session) {
+    router.replace("/login" as any);
+    return;
+  }
+
+ const userEmail = session.user.email?.toLowerCase();
 
 const { data: profile } = await supabase
   .from("profiles")
-  .select("role")
+  .select("role, email")
   .eq("id", session.user.id)
-  .single();
+  .maybeSingle();
 
-if (profile?.role === "admin") {
+const profileEmail = profile?.email?.toLowerCase();
+
+const isKatelynAdmin =
+  profile?.role === "admin" ||
+  userEmail === "katelyn@blackcatmerch.com" ||
+  profileEmail === "katelyn@blackcatmerch.com";
+
+if (isKatelynAdmin) {
   router.replace("/admin" as any);
   return;
 }
 
-    const { data, error } = await supabase
-      .from("orders")
-      .select("id, project_name, customer_name, status, created_at")
-      .eq("user_id", session.user.id)
-      .order("created_at", { ascending: false })
-      .limit(3);
+router.replace("/" as any);
 
-    if (!error && data) {
-      setOrders(data);
-    }
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id, project_name, customer_name, status, created_at")
+    .eq("user_id", session.user.id)
+    .order("created_at", { ascending: false })
+    .limit(3);
 
-    setLoading(false);
+  if (!error && data) {
+    setOrders(data);
   }
+
+  setLoading(false);
+}
 
   async function handleLogout() {
     await supabase.auth.signOut();

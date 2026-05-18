@@ -15,7 +15,7 @@ export default function AdminScreen() {
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const { width } = useWindowDimensions();
-  const isMobile = width < 900;
+  const isMobile = width < 700;
 
   useEffect(() => {
     fetchOrders();

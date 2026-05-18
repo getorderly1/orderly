@@ -38,9 +38,20 @@ export default function HomeScreen() {
     } = await supabase.auth.getSession();
 
     if (!session) {
-      router.replace("/login" as any);
-      return;
-    }
+  router.replace("/login" as any);
+  return;
+}
+
+const { data: profile } = await supabase
+  .from("profiles")
+  .select("role")
+  .eq("id", session.user.id)
+  .single();
+
+if (profile?.role === "admin") {
+  router.replace("/admin" as any);
+  return;
+}
 
     const { data, error } = await supabase
       .from("orders")

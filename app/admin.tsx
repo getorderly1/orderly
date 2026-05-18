@@ -71,15 +71,17 @@ export default function AdminScreen() {
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>
       <View style={[styles.sidebar, isMobile && styles.sidebarMobile]}>
-        <Text style={styles.sidebarLogo}>Orderly</Text>
-        <Text style={styles.sidebarSubtext}>Admin Workspace</Text>
+        <Text style={styles.brandLogo}>ORDERLY.</Text>
+        <Text style={styles.sidebarSubtext}>ADMIN WORKSPACE</Text>
 
         <TouchableOpacity style={styles.sidebarLogout} onPress={handleLogout}>
           <Text style={styles.sidebarLogoutText}>Logout</Text>
         </TouchableOpacity>
 
         <ScrollView horizontal={isMobile} showsHorizontalScrollIndicator={false}>
-          <View style={[styles.sidebarMenu, isMobile && styles.sidebarMenuMobile]}>
+          <View
+            style={[styles.sidebarMenu, isMobile && styles.sidebarMenuMobile]}
+          >
             <SidebarItem label="Dashboard" active />
             <SidebarItem label="Orders" />
             <SidebarItem label="Quotes" />
@@ -99,7 +101,7 @@ export default function AdminScreen() {
         <View style={[styles.header, isMobile && styles.headerMobile]}>
           <View style={styles.headerTextWrap}>
             <Text style={[styles.welcome, isMobile && styles.welcomeMobile]}>
-              Welcome back, Katelyn
+              {getGreeting()}, Katelyn
             </Text>
 
             <Text style={styles.subheader}>
@@ -108,7 +110,9 @@ export default function AdminScreen() {
             </Text>
           </View>
 
-          <View style={[styles.headerActions, isMobile && styles.headerActionsMobile]}>
+          <View
+            style={[styles.headerActions, isMobile && styles.headerActionsMobile]}
+          >
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
               <Text style={styles.logoutButtonText}>Logout</Text>
             </TouchableOpacity>
@@ -126,7 +130,9 @@ export default function AdminScreen() {
           <StatCard number={`${rushOrders}`} label="Rush Orders" />
         </View>
 
-        <View style={[styles.workspaceGrid, isMobile && styles.workspaceGridMobile]}>
+        <View
+          style={[styles.workspaceGrid, isMobile && styles.workspaceGridMobile]}
+        >
           <View style={[styles.leftColumn, isMobile && styles.fullWidth]}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Order Queue</Text>
@@ -417,6 +423,15 @@ function ActivityItem({ title, subtitle }: { title: string; subtitle: string }) 
   );
 }
 
+function getGreeting() {
+  const hour = new Date().getHours();
+
+  if (hour < 12) return "Good Morning";
+  if (hour < 18) return "Good Afternoon";
+
+  return "Good Evening";
+}
+
 function formatDate(date: string | null) {
   if (!date) return "Recently";
 
@@ -456,21 +471,23 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
   },
 
-  sidebarLogo: {
+  brandLogo: {
     color: "#ffffff",
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: "900",
-    letterSpacing: -1.2,
-    marginBottom: 4,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    marginBottom: 8,
+    fontFamily: "Georgia",
   },
 
   sidebarSubtext: {
     color: "#d6c7a1",
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 1,
+    letterSpacing: 2,
     textTransform: "uppercase",
-    marginBottom: 14,
+    marginBottom: 18,
   },
 
   sidebarLogout: {

@@ -13,6 +13,7 @@ import { supabase } from "../lib/supabase";
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   async function handleLogin() {
     if (!email || !password) {
@@ -20,15 +21,51 @@ export default function LoginScreen() {
       return;
     }
 
+    if (isLoggingIn) return;
+
+    setIsLoggingIn(true);
+
     const cleanEmail = email.trim().toLowerCase();
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
       password,
     });
 
     if (error) {
+      setIsLoggingIn(false);
       Alert.alert("Login failed", error.message);
+      return;
+    }
+
+    if (!session?.user?.id) {
+      setIsLoggingIn(false);
+      Alert.alert("Login failed", "Could not find user session.");
+      return;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role, email")
+      .eq("id", session.user.id)
+      .single();
+
+    setIsLoggingIn(false);
+
+    if (profileError) {
+      Alert.alert(
+        "Profile issue",
+        "You are logged in, but your profile could not be loaded."
+      );
+      router.replace("/" as any);
+      return;
+    }
+
+    if (profile?.role === "admin") {
+      router.replace("/admin" as any);
       return;
     }
 
@@ -60,8 +97,14 @@ export default function LoginScreen() {
         secureTextEntry
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Log In</Text>
+      <TouchableOpacity
+        style={[styles.button, isLoggingIn && styles.buttonDisabled]}
+        onPress={handleLogin}
+        disabled={isLoggingIn}
+      >
+        <Text style={styles.buttonText}>
+          {isLoggingIn ? "Logging in..." : "Log In"}
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push("/signup" as any)}>
@@ -111,6 +154,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     marginTop: 8,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonText: {
     color: "#fff",

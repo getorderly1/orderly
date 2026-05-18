@@ -62,7 +62,7 @@ if (isKatelynAdmin) {
   return;
 }
 
-router.replace("/" as any);
+setLoading(false);
 
   const { data, error } = await supabase
     .from("orders")

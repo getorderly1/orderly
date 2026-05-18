@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -15,6 +15,7 @@ const steps = ["Project", "Order", "Artwork", "Shipping", "Budget", "Review"];
 
 export default function NewOrderScreen() {
   const [step, setStep] = useState(0);
+  const [userId, setUserId] = useState("");
 
   const [projectName, setProjectName] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -71,6 +72,41 @@ export default function NewOrderScreen() {
   const [budgetNotes, setBudgetNotes] = useState("");
   const [questions, setQuestions] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    checkUser();
+  }, []);
+
+  async function checkUser() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      router.replace("/login" as any);
+      return;
+    }
+
+    setUserId(session.user.id);
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", session.user.id)
+      .single();
+
+    if (profile) {
+      setCompanyName(profile.company_name || "");
+      setContactName(profile.full_name || "");
+      setContactEmail(profile.email || session.user.email || "");
+      setPhoneNumber(profile.phone || "");
+    }
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.replace("/login" as any);
+  }
 
   const sizeTotal =
     numberValue(youthXS) +
@@ -137,6 +173,12 @@ export default function NewOrderScreen() {
   const submitOrder = async () => {
     if (isSubmitting) return;
 
+    if (!userId) {
+      alert("Please log in before submitting an order.");
+      router.replace("/login" as any);
+      return;
+    }
+
     if (sizeWarning) {
       alert(
         `Please check the size breakdown before submitting. Your total quantity is ${enteredQuantity}, but your sizes add up to ${sizeTotal}.`
@@ -148,6 +190,7 @@ export default function NewOrderScreen() {
 
     const fullOrderNotes = [
       orderNotes ? `Order Notes: ${orderNotes}` : "",
+      brandPreference ? `Brand Preference: ${brandPreference}` : "",
       sizeSummary ? `Size Breakdown: ${sizeSummary}` : "",
       sizeNotes ? `Size Notes: ${sizeNotes}` : "",
       hasArtwork ? "Customer has artwork: Yes" : "Customer has artwork: No",
@@ -171,6 +214,7 @@ export default function NewOrderScreen() {
       .join(", ");
 
     const { error } = await supabase.from("orders").insert({
+      user_id: userId,
       project_name: projectName,
       company_name: companyName,
       primary_contact: contactName,
@@ -208,9 +252,15 @@ export default function NewOrderScreen() {
     <View style={styles.screen}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
-          <TouchableOpacity onPress={previousStep} style={styles.backButton}>
-            <Text style={styles.backText}>←</Text>
-          </TouchableOpacity>
+          <View style={styles.topRow}>
+            <TouchableOpacity onPress={previousStep} style={styles.backButton}>
+              <Text style={styles.backText}>←</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.badge}>
             <Text style={styles.badgeText}>START NEW ORDER</Text>
@@ -696,6 +746,7 @@ export default function NewOrderScreen() {
                     value={collaborators.length ? collaborators.join(", ") : "None added"}
                   />
                   <ReviewItem label="Garment Type" value={garmentType || "Not added"} />
+                  <ReviewItem label="Brand Preference" value={brandPreference || "Not added"} />
                   <ReviewItem label="Total Quantity" value={quantity || "Not added"} />
                   <ReviewItem label="Size Breakdown" value={sizeSummary || "No sizes added"} />
                   <ReviewItem label="Size Total" value={`${sizeTotal}`} />
@@ -902,6 +953,13 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 34,
   },
 
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+
   backButton: {
     width: 42,
     height: 42,
@@ -909,7 +967,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#1f1f1b",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 24,
   },
 
   backText: {
@@ -917,6 +974,22 @@ const styles = StyleSheet.create({
     fontSize: 25,
     fontWeight: "900",
     marginTop: -2,
+  },
+
+  logoutButton: {
+    backgroundColor: "#1f1f1b",
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "#33332e",
+  },
+
+  logoutText: {
+    color: "#d6c7a1",
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 0.7,
   },
 
   badge: {

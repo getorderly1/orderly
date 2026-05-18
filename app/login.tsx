@@ -18,7 +18,7 @@ export default function LoginScreen() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   async function handleLogin() {
-    if (!email || !password) {
+    if (!email.trim() || !password.trim()) {
       Alert.alert("Missing info", "Please enter your email and password.");
       return;
     }
@@ -27,55 +27,59 @@ export default function LoginScreen() {
 
     setIsLoggingIn(true);
 
-    const cleanEmail = email.trim().toLowerCase();
+    try {
+      const cleanEmail = email.trim().toLowerCase();
 
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.signInWithPassword({
-      email: cleanEmail,
-      password,
-    });
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
 
-    if (error) {
+      if (error) {
+        Alert.alert("Login failed", error.message);
+        return;
+      }
+
+      if (!session?.user?.id) {
+        Alert.alert("Login failed", "Could not find user session.");
+        return;
+      }
+
+      const authEmail = session.user.email?.trim().toLowerCase();
+
+      if (authEmail && ADMIN_EMAILS.includes(authEmail)) {
+        router.replace("/admin" as any);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, email")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      const profileEmail = profile?.email?.trim().toLowerCase();
+
+      if (
+        profile?.role === "admin" ||
+        (profileEmail && ADMIN_EMAILS.includes(profileEmail))
+      ) {
+        router.replace("/admin" as any);
+        return;
+      }
+
+      router.replace("/" as any);
+    } catch (error: any) {
+      Alert.alert(
+        "Login error",
+        error?.message || "Something went wrong. Please try again."
+      );
+    } finally {
       setIsLoggingIn(false);
-      Alert.alert("Login failed", error.message);
-      return;
     }
-
-    if (!session?.user?.id) {
-      setIsLoggingIn(false);
-      Alert.alert("Login failed", "Could not find user session.");
-      return;
-    }
-
-    const authEmail = session.user.email?.trim().toLowerCase();
-
-    if (authEmail && ADMIN_EMAILS.includes(authEmail)) {
-      setIsLoggingIn(false);
-      router.replace("/admin" as any);
-      return;
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, email")
-      .eq("id", session.user.id)
-      .maybeSingle();
-
-    const profileEmail = profile?.email?.trim().toLowerCase();
-
-    if (
-      profile?.role === "admin" ||
-      (profileEmail && ADMIN_EMAILS.includes(profileEmail))
-    ) {
-      setIsLoggingIn(false);
-      router.replace("/admin" as any);
-      return;
-    }
-
-    setIsLoggingIn(false);
-    router.replace("/" as any);
   }
 
   return (
@@ -91,6 +95,7 @@ export default function LoginScreen() {
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
+        autoCorrect={false}
         keyboardType="email-address"
       />
 

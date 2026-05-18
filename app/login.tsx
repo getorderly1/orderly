@@ -32,19 +32,14 @@ export default function LoginScreen() {
       return;
     }
 
-    // FIXED ROUTE
     router.replace("/" as any);
   }
 
   return (
     <View style={styles.container}>
       <Text style={styles.smallTitle}>ORDERLY</Text>
-
       <Text style={styles.title}>Welcome back.</Text>
-
-      <Text style={styles.subtitle}>
-        Log in to continue your workspace.
-      </Text>
+      <Text style={styles.subtitle}>Log in to continue your workspace.</Text>
 
       <TextInput
         placeholder="Email"
@@ -65,19 +60,12 @@ export default function LoginScreen() {
         secureTextEntry
       />
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleLogin}
-      >
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Log In</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={() => router.push("/signup" as any)}
-      >
-        <Text style={styles.link}>
-          Need an account? Sign up
-        </Text>
+      <TouchableOpacity onPress={() => router.push("/signup" as any)}>
+        <Text style={styles.link}>Need an account? Sign up</Text>
       </TouchableOpacity>
     </View>
   );
@@ -90,7 +78,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#f5f2eb",
   },
-
   smallTitle: {
     fontSize: 12,
     fontWeight: "800",
@@ -98,20 +85,17 @@ const styles = StyleSheet.create({
     color: "#5a5147",
     marginBottom: 8,
   },
-
   title: {
     fontSize: 34,
     fontWeight: "900",
     color: "#111",
   },
-
   subtitle: {
     fontSize: 15,
     color: "#5a5147",
     marginTop: 8,
     marginBottom: 28,
   },
-
   input: {
     backgroundColor: "#fffaf2",
     borderWidth: 1,
@@ -121,7 +105,6 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     fontSize: 15,
   },
-
   button: {
     backgroundColor: "#111",
     padding: 18,
@@ -129,13 +112,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 8,
   },
-
   buttonText: {
     color: "#fff",
     fontWeight: "800",
     fontSize: 16,
   },
-
   link: {
     marginTop: 22,
     textAlign: "center",

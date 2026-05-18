@@ -1,12 +1,12 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from "react-native";
 
 import { supabase } from "../lib/supabase";
@@ -39,6 +39,11 @@ export default function AdminScreen() {
     }
   };
 
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.replace("/login" as any);
+  }
+
   const openProject = () => {
     if (!selectedOrder) return;
 
@@ -68,6 +73,10 @@ export default function AdminScreen() {
       <View style={[styles.sidebar, isMobile && styles.sidebarMobile]}>
         <Text style={styles.sidebarLogo}>Orderly</Text>
         <Text style={styles.sidebarSubtext}>Admin Workspace</Text>
+
+        <TouchableOpacity style={styles.sidebarLogout} onPress={handleLogout}>
+          <Text style={styles.sidebarLogoutText}>Logout</Text>
+        </TouchableOpacity>
 
         <ScrollView horizontal={isMobile} showsHorizontalScrollIndicator={false}>
           <View style={[styles.sidebarMenu, isMobile && styles.sidebarMenuMobile]}>
@@ -99,9 +108,15 @@ export default function AdminScreen() {
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.headerButton} onPress={fetchOrders}>
-            <Text style={styles.headerButtonText}>Refresh Orders</Text>
-          </TouchableOpacity>
+          <View style={[styles.headerActions, isMobile && styles.headerActionsMobile]}>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutButtonText}>Logout</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.headerButton} onPress={fetchOrders}>
+              <Text style={styles.headerButtonText}>Refresh Orders</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={[styles.statsRow, isMobile && styles.statsRowMobile]}>
@@ -455,7 +470,24 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1,
     textTransform: "uppercase",
-    marginBottom: 24,
+    marginBottom: 14,
+  },
+
+  sidebarLogout: {
+    backgroundColor: "#1f1f1b",
+    borderWidth: 1,
+    borderColor: "#33332e",
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 22,
+    alignItems: "center",
+  },
+
+  sidebarLogoutText: {
+    color: "#d6c7a1",
+    fontSize: 13,
+    fontWeight: "900",
   },
 
   sidebarMenu: {
@@ -533,6 +565,32 @@ const styles = StyleSheet.create({
     color: "#6f6c64",
     lineHeight: 24,
     maxWidth: 560,
+  },
+
+  headerActions: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+  },
+
+  headerActionsMobile: {
+    width: "100%",
+    justifyContent: "space-between",
+  },
+
+  logoutButton: {
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 22,
+    paddingVertical: 15,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#e6dfcf",
+  },
+
+  logoutButtonText: {
+    color: "#111111",
+    fontSize: 14,
+    fontWeight: "900",
   },
 
   headerButton: {
